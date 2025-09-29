@@ -1,3 +1,4 @@
+
 from datetime import datetime
 
 
@@ -37,34 +38,55 @@ class Hall(Films):
                 row, col = map(int, input('Укажите номер ряда и номер кресла через пробел >>>').split())
             except ValueError:
                 print('Введите цифрами')
+                continue
+            try:
+                self.PLACES[row - 1][col - 1]
             except IndexError:
-                print('такого ряда или кресла не существует повторите попытку')
+                print('Ряда или кресла не сущетсвует')
+                continue
+            if self.PLACES[row - 1][col - 1] == '':
+                self.PLACES[row - 1][col - 1] = 'З'
+            else:
+                print('Место занято')
             break
-        try:
-            self.PLACES[row][col]
-        except IndexError:
-            print()
-        self.PLACES[row - 1][col - 1] = 'З'
         self.free_place -= 1
         self.busy_place += 1
         for row in self.PLACES:
             print(row)
 
-
     def create_seans(self):
-        if not self.FILM is None:
+        name = input('Введите название фильма >>>')
+        if self.FILM is not None:
+            if self.FILM.name == name:
+                print('Cеанс этого фильма уже назначен')
+                return None
             print('В зале уже назначен сеанc')
             solution = input('Желаете заменить? (Да/Нет) >>>').strip().lower()
-            if solution == 'нет':
-                return None
-        name = input('Введите название фильма >>>')
+            while True:
+                if solution == 'нет':
+                    return None
+                elif solution == 'да':
+                    break
+                else:
+                    print('такого ответа нет, повторите попытку')
+                    continue
+
         while True:
             try:
                 tseans = datetime.strptime(input('Ввведите время сеанса hh:mm >>>'), '%H:%M')
             except ValueError:
                 print('Неправильный формат Даты повторите попытку')
+                continue
+            break
+        while True:
             try:
                 time = int(input('Введите длительность фильма в минутах >>>'))
+            except ValueError:
+                print('Ошибка: Введите цифрами')
+                continue
+            break
+        while True:
+            try:
                 price = int(input('Введите цену фильма >>>'))
             except ValueError:
                 print('Ошибка: Введите цифрами')
@@ -79,7 +101,12 @@ class Cinemas:
         self.HALLS = {}
 
     def append_hall(self):
-        name = input('Введите название зала >>>').strip()
+        while True:
+            name = input('Введите название зала >>>').strip()
+            if name in self.HALLS.keys():
+                print('Зал с таким именем уже существует измените его')
+                continue
+            break
         while True:
             try:
                 count_row, count_col = list(map(int,
@@ -114,7 +141,7 @@ class Programs(Cinemas):
             print('Кинотеатров не существует')
             return
         print('Доступные кинотеатры:',
-              ' ,'.join([cinema for  cinema in self.CINEMAS.keys()]))
+              ' ,'.join([cinema for cinema in self.CINEMAS.keys()]))
         name_cinemas = input('Введите название кинотеатра о котором нужна информация>>>')
         if name_cinemas not in self.CINEMAS.keys():
             print('Кинотеатра не сущесвует')
@@ -136,26 +163,30 @@ class Programs(Cinemas):
             hall.FILM.film_info()
 
     def append_film(self):
-        if self.CINEMAS == {}:
+        cinem = self.CINEMAS
+        if cinem == {}:
             print('Кинотеатров не существует')
             return
         print('Доступные кинотеатры:',
-              ', '.join([cinemas for cinemas in self.CINEMAS.keys()]))
+              ', '.join([cinemas for cinemas in cinem.keys()]))
         name = input('Введите название кинотеатра >>>')
-        hall = self.CINEMAS[name].HALLS
-        if name not in self.CINEMAS.keys():
+        if name not in cinem.keys():
             print('Такого кинотеатра нет')
             return
-        if not hall:
+        if not cinem[name].HALLS:
             print('В кинотеатре не существует залов')
             return
-        print('Доступные залы')
+        hall = cinem[name].HALLS
+        print('Доступные залы:')
         print(', '.join([hall for hall in hall.keys()]))
         name_hall = input('Введите номер зала >>>')
         if name_hall not in hall.keys():
             print('Этого зала не существует')
             return
         film_name = hall[name_hall].create_seans()
+        if not film_name:
+            print('Операция была отмененна')
+            return
         if name not in self.have_films.keys():
             self.have_films[name] = [(film_name, name_hall)]
             return
@@ -177,7 +208,7 @@ class Programs(Cinemas):
             for nameh, hall in cinemas.HALLS.items():
                 if not hall.FILM or hall.FILM.name != film_name:
                     continue
-                if best_session is None or (best_session > hall.FILM.tseans and hall.free_place != 0 ):
+                if best_session is None or (best_session > hall.FILM.tseans and hall.free_place != 0):
                     path = []
                     best_session = hall.FILM.tseans
                     path.extend([name, nameh, best_session])
@@ -194,40 +225,49 @@ class Programs(Cinemas):
         else:
             print('\n'.join(
                  [f'В кинотеатре {cinema} проходят сеансы:'
-                  f'В зале {seans[1]} проходит фильм {seans[0]}'
+                  f'В зале {seans[1]} проходит фильм {seans[0]} стоимостью {self.CINEMAS[cinema].HALLS[seans[1]].price}'
+                  if self.CINEMAS[cinema].HALLS[seans[1]].free_place != 0
+                  else f'в кинотеатре {cinema} в зале {seans[1]} мест нет'
                   for cinema in self.have_films.keys()
                   for seans in self.have_films[cinema]]),
-                sep='\n'
-                )
-
+                end='\n')
         name = input('Введите имя кинотеатра >>>')
         if name not in self.have_films.keys():
             print('такого кинотеатра не существует или в нем не идет показ')
             return
         cinem = self.CINEMAS[name]
-        print('Залы:', ', '.join([h for h in cinem.HALLS.keys()]))
+        hall = cinem.HALLS
+        print('Залы:', ', '.join([h for h in hall.keys()]))
         nameh = input('Введите имя зала >>>')
-        hall = cinem.HALLS[nameh]
-        if nameh not in cinem.HALLS.keys():
+        if nameh not in hall.keys():
             print('Такого зала не существует')
             return
-        if not cinem.HALLS[nameh].FILM:
+        if not hall[nameh].FILM:
             print('В данном зале не проводится сеанс')
             return
-        if hall.free_place == 0:
+        if hall[nameh].free_place == 0:
             print('В этом зале нет свободных мест')
-        print(f'Cтоимость фильма {hall.FILM.price} рублей')
-        sol = input('Преобрести билет? (Да\Нет) >>>').strip().lower()
-        if sol == 'да':
-            hall.append_place()
-            print('Спасибо за покупку')
-        else:
-            print('произошла отмена')
+            return
+        print(f'Cтоимость фильма {hall[nameh].FILM.price} рублей')
+        while True:
+            sol = input('Преобрести билет? (Да\Нет) >>>').strip().lower()
+            if sol == 'да':
+                hall[nameh].append_place()
+                print('Спасибо за покупку')
+                return
+            elif sol == 'нет':
+                print('произошла отмена')
+                return
+            else:
+                print('Неправильный ввод ответа повторите попытку')
+                continue
 
     def add_hall(self):
         if self.CINEMAS == {}:
             print('Кинотеатров не существует')
             return
+        print('Доступные кинотеатры:',
+              ', '.join([cinemas for cinemas in self.CINEMAS.keys()]))
         cin_name = input('Введите название кинотеатра >>>')
         if cin_name not in self.CINEMAS.keys():
             print('Такого кинотеатра не существует')
@@ -254,7 +294,7 @@ class Programs(Cinemas):
 pg = Programs()
 print('Для получения информации о командах введите help')
 while True:
-    com = input('Введите комнаду >>>')
+    com = input('Введите комнаду >>>').strip()
     if com == 'help':
         pg.help()
     elif com == 'add_cinema':
@@ -271,6 +311,3 @@ while True:
         pg.add_hall()
     elif com == 'end':
         break
-
-
-
